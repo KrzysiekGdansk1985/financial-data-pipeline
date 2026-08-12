@@ -1,0 +1,8 @@
+# Nie śledź środowiska Python
+.venv/   
+
+# Nie śledź pobranych danych
+data/ 
+
+# Nie śledź plików cache Pythona
+__pycache__/  
