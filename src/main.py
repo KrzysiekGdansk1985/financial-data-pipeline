@@ -81,6 +81,54 @@ def transform_data(all_data):
 def save_data(df, file_path):
     df.to_csv(file_path, index=False)
 
+def validate_data(df, start_date, end_date):
+
+    first_date = df["open_time"].min()
+    last_date = df["open_time"].max()
+
+    print("First date:", first_date)
+    print("Last date:", last_date)
+
+    if len(df) == 0:
+        raise ValueError("Data validation failed: dataset is empty.")
+
+    print("Record count:", len(df))
+
+    missing_values = df.isna().sum().sum()
+
+    if missing_values > 0:
+        raise ValueError(
+            f"Data validation failed: {missing_values} missing values found."
+        )
+
+    print("Missing values: 0")
+
+    duplicate_rows = df.duplicated().sum()
+
+    if duplicate_rows > 0:
+        raise ValueError(
+            f"Data validation failed: {duplicate_rows} duplicate rows found."
+        )
+
+    print("Duplicate rows: 0")
+
+    if not df["open_time"].is_monotonic_increasing:
+        raise ValueError(
+            "Data validation failed: timestamps are not sorted."
+        )
+
+    print("Data sorted: True")
+
+    invalid_ohlc = ((df["high"] < df["open"]) | (df["high"] < df["close"]) |
+    (df["low"] > df["open"]) | (df["low"] > df["close"])).sum()
+
+    if invalid_ohlc > 0:
+        raise ValueError(f"Data validation failed: {invalid_ohlc} invalid OHLC rows found."    )
+
+    print("OHLC validation: True")
+
+
+
 
 def main():
     start_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -92,6 +140,8 @@ def main():
     print("Total records:", len(all_data))
 
     df = transform_data(all_data)
+
+    validate_data(df, start_date, end_date)
 
     save_data(df, "data/btcusdt_ohlcv.csv")
 
