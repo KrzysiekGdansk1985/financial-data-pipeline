@@ -5,4 +5,7 @@
 data/ 
 
 # Nie śledź plików cache Pythona
-__pycache__/  
+__pycache__/
+
+# Nie śledź plików logów
+*.log

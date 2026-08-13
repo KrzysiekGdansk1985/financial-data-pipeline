@@ -1,6 +1,17 @@
 import requests
+import logging
 from datetime import datetime, timezone, timedelta
 import pandas as pd
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    filename="pipeline.log"
+
+)
+
+logger = logging.getLogger(__name__)
 
 url = "https://api.binance.com/api/v3/klines"
 
@@ -17,7 +28,7 @@ def fetch_data(start_date, end_date, batch_days):
             end_date
         )
 
-        print("Batch:", current_date, "→", next_date)
+        logger.info("Batch: %s → %s", current_date, next_date)
 
         params = {
             "symbol": "BTCUSDT",
@@ -31,15 +42,16 @@ def fetch_data(start_date, end_date, batch_days):
             response = requests.get(url, params=params, timeout=10)
 
         except requests.RequestException as e:
+            logger.error("API request failed: %s", e)
             raise RuntimeError(f"API request failed: {e}")
 
-        print("Status:", response.status_code)
+        logger.info("Status: %s", response.status_code)
 
         response.raise_for_status()
 
         data = response.json()
 
-        print("Records:", len(data))
+        logger.info("Records: %s", len(data))
 
         all_data.extend(data)
 
@@ -84,19 +96,24 @@ def transform_data(all_data):
 
 def save_data(df, file_path):
     df.to_csv(file_path, index=False)
+    logger.info("Data saved to: %s", file_path)
 
 def validate_data(df, start_date, end_date):
 
     first_date = df["open_time"].min()
     last_date = df["open_time"].max()
 
-    print("First date:", first_date)
-    print("Last date:", last_date)
+    logger.info("First date: %s", first_date)
+    logger.info("Last date: %s", last_date)
 
     if len(df) == 0:
         raise ValueError("Data validation failed: dataset is empty.")
 
-    print("Record count:", len(df))
+    logger.info("Record count: %s", len(df))
+
+    if len(df) < 5:
+        logger.warning("Low record count: %s records found.", len(df)
+    )
 
     missing_values = df.isna().sum().sum()
 
@@ -105,7 +122,7 @@ def validate_data(df, start_date, end_date):
             f"Data validation failed: {missing_values} missing values found."
         )
 
-    print("Missing values: 0")
+    logger.info("Missing values: 0")
 
     duplicate_rows = df.duplicated().sum()
 
@@ -114,14 +131,14 @@ def validate_data(df, start_date, end_date):
             f"Data validation failed: {duplicate_rows} duplicate rows found."
         )
 
-    print("Duplicate rows: 0")
+    logger.info("Duplicate rows: 0")
 
     if not df["open_time"].is_monotonic_increasing:
         raise ValueError(
             "Data validation failed: timestamps are not sorted."
         )
 
-    print("Data sorted: True")
+    logger.info("Data sorted: True")
 
     invalid_ohlc = ((df["high"] < df["open"]) | (df["high"] < df["close"]) |
     (df["low"] > df["open"]) | (df["low"] > df["close"])).sum()
@@ -129,12 +146,13 @@ def validate_data(df, start_date, end_date):
     if invalid_ohlc > 0:
         raise ValueError(f"Data validation failed: {invalid_ohlc} invalid OHLC rows found."    )
 
-    print("OHLC validation: True")
+    logger.info("OHLC validation: True")
 
 
 
 
 def main():
+    logger.info("Pipeline started")
     start_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
     end_date = datetime(2026, 1, 10, tzinfo=timezone.utc)
     batch_days = 5
@@ -148,6 +166,8 @@ def main():
     validate_data(df, start_date, end_date)
 
     save_data(df, "data/btcusdt_ohlcv.csv")
+
+    logger.info("Pipeline finished successfully")
 
 if __name__ == "__main__":
     main()
