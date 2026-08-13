@@ -27,7 +27,11 @@ def fetch_data(start_date, end_date, batch_days):
             "limit": 1000
         }
 
-        response = requests.get(url, params=params)
+        try:
+            response = requests.get(url, params=params, timeout=10)
+
+        except requests.RequestException as e:
+            raise RuntimeError(f"API request failed: {e}")
 
         print("Status:", response.status_code)
 
