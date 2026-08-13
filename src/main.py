@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
-#import logger_config
+import logger_config
 from extract import fetch_data
 from transform import transform_data
 from validate import validate_data
