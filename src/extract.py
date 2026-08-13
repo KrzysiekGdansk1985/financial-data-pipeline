@@ -2,6 +2,8 @@ import logging
 import requests
 from datetime import timedelta
 
+from config import SYMBOL, INTERVAL
+
 logger = logging.getLogger(__name__)
 
 url = "https://api.binance.com/api/v3/klines"
@@ -21,8 +23,8 @@ def fetch_data(start_date, end_date, batch_days):
         logger.info("Batch: %s → %s", current_date, next_date)
 
         params = {
-            "symbol": "BTCUSDT",
-            "interval": "1d",
+            "symbol": SYMBOL,
+            "interval": INTERVAL,
             "startTime": int(current_date.timestamp() * 1000),
             "endTime": int(next_date.timestamp() * 1000),
             "limit": 1000
