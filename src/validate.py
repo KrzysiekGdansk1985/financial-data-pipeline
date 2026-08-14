@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def validate_data(df, start_date, end_date):
+def validate_data(df):
 
     first_date = df["open_time"].min()
     last_date = df["open_time"].max()

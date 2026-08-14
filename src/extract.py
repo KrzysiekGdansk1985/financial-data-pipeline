@@ -2,7 +2,7 @@ import logging
 import requests
 from datetime import timedelta
 
-from config import SYMBOL, INTERVAL
+from src.config import SYMBOL, INTERVAL
 
 logger = logging.getLogger(__name__)
 
