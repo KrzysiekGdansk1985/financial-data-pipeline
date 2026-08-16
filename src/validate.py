@@ -4,6 +4,8 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 def validate_data(df: pd.DataFrame) -> None:
+    """Sprawdza jakość danych i zgłasza błędy w przypadku nieprawidłowości."""
+
     if len(df) == 0:
         raise ValueError("Data validation failed: dataset is empty.")
 

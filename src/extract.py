@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 url = "https://api.binance.com/api/v3/klines"
 
 def fetch_data(start_date: datetime, end_date: datetime, batch_days: int) -> list:
+    """Pobiera dane OHLCV z Binance API w określonym zakresie dat."""
 
     all_data = []
     current_date = start_date

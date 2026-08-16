@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    """Uruchamia cały pipeline ETL."""
+
     logger.info("Pipeline started")
 
     all_data = fetch_data(START_DATE, END_DATE, BATCH_DAYS)
