@@ -1,17 +1,17 @@
 import logging
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-def validate_data(df):
+def validate_data(df: pd.DataFrame) -> None:
+    if len(df) == 0:
+        raise ValueError("Data validation failed: dataset is empty.")
 
     first_date = df["open_time"].min()
     last_date = df["open_time"].max()
 
     logger.info("First date: %s", first_date)
     logger.info("Last date: %s", last_date)
-
-    if len(df) == 0:
-        raise ValueError("Data validation failed: dataset is empty.")
 
     logger.info("Record count: %s", len(df))
 

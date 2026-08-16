@@ -10,7 +10,7 @@ from src.load import save_data
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main() -> None:
     logger.info("Pipeline started")
 
     all_data = fetch_data(START_DATE, END_DATE, BATCH_DAYS)

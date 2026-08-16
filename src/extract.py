@@ -1,6 +1,6 @@
 import logging
 import requests
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from src.config import SYMBOL, INTERVAL
 
@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 url = "https://api.binance.com/api/v3/klines"
 
-def fetch_data(start_date, end_date, batch_days):
+def fetch_data(start_date: datetime, end_date: datetime, batch_days: int) -> list:
 
     all_data = []
     current_date = start_date

@@ -1,6 +1,6 @@
 import pandas as pd
 
-def transform_data(all_data):
+def transform_data(all_data: list) -> pd.DataFrame:
 
     columns = [
         "open_time",
