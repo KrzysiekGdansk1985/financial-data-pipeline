@@ -9,3 +9,6 @@ __pycache__/
 
 # Nie śledź plików logów
 *.log
+
+# Nie śledź danych dotyczących pokrycia Pytest
+.coverage
