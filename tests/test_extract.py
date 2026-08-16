@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
-import requests
+
 import pytest
+import requests
 
 from src.extract import fetch_data
 

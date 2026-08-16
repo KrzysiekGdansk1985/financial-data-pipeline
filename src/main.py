@@ -1,17 +1,19 @@
 import logging
 
-import src.logger_config
-from src.config import START_DATE, END_DATE, BATCH_DAYS, OUTPUT_FILE
+from src.config import BATCH_DAYS, END_DATE, OUTPUT_FILE, START_DATE
 from src.extract import fetch_data
+from src.load import save_data
+from src.logger_config import setup_logging
 from src.transform import transform_data
 from src.validate import validate_data
-from src.load import save_data
 
 logger = logging.getLogger(__name__)
 
 
 def main() -> None:
     """Uruchamia cały pipeline ETL."""
+
+    setup_logging()
 
     logger.info("Pipeline started")
 

@@ -1,8 +1,9 @@
 import logging
-import requests
 from datetime import datetime, timedelta
 
-from src.config import SYMBOL, INTERVAL
+import requests
+
+from src.config import INTERVAL, SYMBOL
 
 logger = logging.getLogger(__name__)
 

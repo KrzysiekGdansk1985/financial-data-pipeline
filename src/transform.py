@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def transform_data(all_data: list) -> pd.DataFrame:
     """Przekształca surowe dane OHLCV do DataFrame i konwertuje typy danych."""
 
