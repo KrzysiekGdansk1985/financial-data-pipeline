@@ -89,11 +89,11 @@ The log contains information about:
 ## Installation
 
 Create a virtual environment:
-python -m venv .venv
+- python -m venv .venv
 Activate the environment:
-.venv\Scripts\Activate.ps1
+- .venv\Scripts\Activate.ps1
 Install dependencies:
-python -m pip install -r requirements.txt
+- python -m pip install -r requirements.txt
 
 ## Running the Pipeline
 
