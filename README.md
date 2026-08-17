@@ -1,5 +1,7 @@
 # Financial Data Pipeline
 
+[![CI](https://github.com/KrzysiekGdansk1985/financial-data-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/KrzysiekGdansk1985/financial-data-pipeline/actions/workflows/ci.yml)
+
 ETL pipeline for collecting and processing BTCUSDT OHLCV data from the Binance API.
 
 ## Project Overview
