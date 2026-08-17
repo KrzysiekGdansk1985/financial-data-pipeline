@@ -20,7 +20,6 @@ Extract → Transform → Validate → Load
 
 ## Project Structure
 
-```text
 financial-data-pipeline/
 │
 ├── data/
