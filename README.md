@@ -19,7 +19,7 @@ Extract → Transform → Validate → Load
 - Git
 
 ## Project Structure
-
+```text
 financial-data-pipeline/
 │
 ├── data/
@@ -37,7 +37,7 @@ financial-data-pipeline/
 ├── .gitignore
 ├── requirements.txt
 └── README.md
-
+```
 ## Pipeline
 
 1. Extract
