@@ -41,10 +41,12 @@ financial-data-pipeline/
 ## Pipeline
 
 1. Extract
+
 Data is downloaded from the Binance API using the requests library.
 The pipeline supports downloading data in batches to avoid requesting the entire time range in a single API request.
 
 2. Transform
+
 Raw API data is converted into a Pandas DataFrame.
 The transformation includes:
 - converting timestamps to datetime,
@@ -52,6 +54,7 @@ The transformation includes:
  - creating a structured tabular dataset.
 
 3. Validate
+
 The pipeline performs basic data-quality checks:
 - empty dataset,
 - missing values,
@@ -60,14 +63,15 @@ The pipeline performs basic data-quality checks:
 - OHLC consistency.
 
 4. Load
+
 The processed dataset is saved as:
 data/btcusdt_ohlcv.csv
 
 ## Configuration
 
-Pipeline parameters are stored in:
+1. Pipeline parameters are stored in:
 src/config.py
-Current configuration includes:
+2. Current configuration includes:
 - trading symbol,
 - interval,
 - start date,
@@ -77,9 +81,9 @@ Current configuration includes:
 
 ## Logging
 
-Pipeline execution is logged to:
+1. Pipeline execution is logged to:
 pipeline.log
-The log contains information about:
+2. The log contains information about:
 - pipeline execution,
 - API requests,
 - number of downloaded records,
@@ -88,18 +92,18 @@ The log contains information about:
 
 ## Installation
 
-Create a virtual environment:
+1. Create a virtual environment:
 - python -m venv .venv
-Activate the environment:
+2. Activate the environment:
 - .venv\Scripts\Activate.ps1
-Install dependencies:
+3. Install dependencies:
 - python -m pip install -r requirements.txt
 
 ## Running the Pipeline
 
-Run:
-python src/main.py
-After successful execution, the processed data is saved to:
-data/btcusdt_ohlcv.csv
+1. Run:
+- python src/main.py
+2. After successful execution, the processed data is saved to:
+- data/btcusdt_ohlcv.csv
 
 
