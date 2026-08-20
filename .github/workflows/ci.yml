@@ -50,8 +50,10 @@ jobs:
         run: |
           docker build \
             -t krzysiekgdansk1985/financial-data-pipeline:latest \
+            -t krzysiekgdansk1985/financial-data-pipeline:${{ github.sha }} \
             .
 
       - name: Push Docker image
         run: |
           docker push krzysiekgdansk1985/financial-data-pipeline:latest
+          docker push krzysiekgdansk1985/financial-data-pipeline:${{ github.sha }}
