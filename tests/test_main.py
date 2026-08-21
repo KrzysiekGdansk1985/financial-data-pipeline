@@ -15,6 +15,9 @@ def test_main_pipeline(monkeypatch):
 
     def fake_validate_data(df):
         return None
+    
+    def fake_run_daily_returns(sql_path):
+        return "fake_daily_returns"
 
     saved_data = {}
 
@@ -42,9 +45,16 @@ def test_main_pipeline(monkeypatch):
 
     monkeypatch.setattr(
         main,
+        "run_daily_returns",
+        fake_run_daily_returns
+)
+    
+    monkeypatch.setattr(
+        main,
         "save_data",
         fake_save_data
     )
+
 
     main.main()
 
