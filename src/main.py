@@ -19,15 +19,15 @@ def main() -> None:
     logger.info("Pipeline started")
 
     all_data = fetch_data(START_DATE, END_DATE, BATCH_DAYS)
-
+    
     df = transform_data(all_data)
-
+    
     validate_data(df)
 
     save_data(df, OUTPUT_FILE)
 
     daily_returns = run_daily_returns("sql/daily_returns.sql")
-
+    
     logger.info("Daily returns calculated")
     logger.info("Analytics records: %s", len(daily_returns))
 
