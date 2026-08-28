@@ -47,7 +47,7 @@ def test_main_pipeline(monkeypatch):
         main,
         "run_daily_returns",
         fake_run_daily_returns
-)
+    )
     
     monkeypatch.setattr(
         main,
