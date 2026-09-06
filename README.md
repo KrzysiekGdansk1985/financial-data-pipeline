@@ -1,63 +1,153 @@
 # Financial Data Pipeline
 
-[![CI](https://github.com/KrzysiekGdansk1985/financial-data-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/KrzysiekGdansk1985/financial-data-pipeline/actions/workflows/ci.yml)
+Pipeline ETL do pobierania, przetwarzania, walidacji i analizy danych rynkowych BTCUSDT z API Binance.
 
-ETL pipeline for collecting, transforming, validating, and analyzing BTCUSDT OHLCV data from the Binance API.
-
-The project demonstrates a complete data engineering workflow including Python-based ETL, data validation, SQL analytics with DuckDB, automated testing, Docker containerization, and CI/CD with GitHub Actions.
+Projekt został wykonany w celu praktycznego rozwijania umiejętności z zakresu **Data Engineering**, w szczególności ETL, pracy z API, jakości danych, SQL, testowania, Dockera oraz CI/CD.
 
 ---
 
-## Project Overview
+## Cel projektu
 
-The pipeline downloads historical BTCUSDT daily market data from the Binance API and processes it through several stages:
+Celem projektu jest stworzenie kompletnego pipeline'u przetwarzającego dane historyczne BTCUSDT.
+
+Pipeline:
+
+1. pobiera dane z Binance API,
+2. przekształca dane do odpowiednich typów,
+3. sprawdza ich poprawność,
+4. zapisuje poprawne dane do pliku CSV,
+5. wykonuje dodatkową analizę przy użyciu SQL i DuckDB.
+
+Projekt zawiera również automatyczne testy, kontrolę jakości kodu oraz proces CI/CD z wykorzystaniem GitHub Actions i Docker Hub.
+
+---
+
+## Architektura
 
 ```text
-Binance API
-     │
-     ▼
-  Extract
-     │
-     ▼
- Transform
-     │
-     ▼
-  Validate
-     │
-     ▼
-    Load
-     │
-     ▼
-CSV dataset
-     │
-     ▼
-DuckDB / SQL
-     │
-     ▼
-Daily returns
+                 Binance API
+                      │
+                      ▼
+                  EXTRACT
+                      │
+                      ▼
+                 TRANSFORM
+                      │
+                      ▼
+                  VALIDATE
+                      │
+             ┌────────┴────────┐
+             │                 │
+          poprawne          błędne
+             │                 │
+             ▼                 ▼
+           LOAD              STOP
+             │
+             ▼
+       CSV: OHLCV data
+             │
+             ▼
+        DuckDB + SQL
+             │
+             ▼
+       Daily returns
 ```
 
-The project also uses GitHub Actions to automatically test the application and build and publish the Docker image.
+---
+
+## Przebieg pipeline'u
+
+### 1. Extract – pobieranie danych
+
+Dane historyczne BTCUSDT są pobierane z **Binance API** przy użyciu biblioteki `requests`.
+
+Pipeline umożliwia pobieranie danych w partiach, dzięki czemu cały zakres danych nie musi być pobierany w jednym żądaniu.
 
 ---
 
-## Technologies
+### 2. Transform – przetwarzanie danych
 
-* Python 3.13
-* Pandas
-* Requests
-* DuckDB
-* SQL
-* Pytest
-* Ruff
-* Docker
-* GitHub Actions
-* Docker Hub
-* Binance API
+Dane otrzymane z API są przekształcane do postaci `Pandas DataFrame`.
+
+Transformacja obejmuje między innymi:
+
+* konwersję timestampów do typu `datetime`,
+* konwersję wartości OHLCV ze stringów do typów numerycznych,
+* przygotowanie uporządkowanego zbioru danych do dalszego przetwarzania.
 
 ---
 
-## Project Structure
+### 3. Validate – walidacja danych
+
+Przed zapisaniem danych wykonywane są podstawowe kontrole jakości.
+
+Sprawdzane są między innymi:
+
+* czy zbiór danych nie jest pusty,
+* czy występują wartości `NULL` / brakujące,
+* czy występują duplikaty,
+* czy timestampy są uporządkowane,
+* czy wartości OHLC są ze sobą logicznie zgodne.
+
+Dla danych OHLC sprawdzane jest między innymi, czy:
+
+```text
+High >= Open
+High >= Low
+High >= Close
+
+Low <= Open
+Low <= High
+Low <= Close
+```
+
+oraz czy wartości cen są nieujemne.
+
+Jeżeli walidacja zakończy się niepowodzeniem, pipeline zostaje zatrzymany i dane nie są zapisywane.
+
+---
+
+### 4. Load – zapis danych
+
+Poprawnie zwalidowane dane są zapisywane do pliku:
+
+```text
+data/btcusdt_ohlcv.csv
+```
+
+---
+
+## Analiza danych – DuckDB i SQL
+
+Po zakończeniu procesu ETL projekt wykonuje dodatkową analizę przy użyciu **DuckDB i SQL**.
+
+Zapytanie znajdujące się w:
+
+```text
+sql/daily_returns.sql
+```
+
+oblicza dzienny procentowy zwrot na podstawie ceny zamknięcia.
+
+Wykorzystywana jest funkcja okna `LAG()`:
+
+```sql
+LAG(close) OVER (ORDER BY open_time)
+```
+
+Pozwala ona pobrać cenę zamknięcia z poprzedniego rekordu według kolejności czasowej.
+
+Dzienny zwrot obliczany jest jako:
+
+```text
+(close - previous_close) / previous_close
+```
+
+Dla pierwszego rekordu `daily_return` przyjmuje wartość `NULL`, ponieważ nie istnieje wcześniejsza cena zamknięcia.
+
+---
+
+## Struktura projektu
 
 ```text
 financial-data-pipeline/
@@ -99,96 +189,38 @@ financial-data-pipeline/
 
 ---
 
-## Pipeline
+## Konfiguracja
 
-### 1. Extract
-
-Historical BTCUSDT OHLCV data is downloaded from the Binance API using the `requests` library.
-
-The pipeline supports downloading data in batches to avoid requesting the entire time range in a single API request.
-
-### 2. Transform
-
-Raw API data is converted into a Pandas DataFrame.
-
-The transformation includes:
-
-* converting timestamps to datetime,
-* converting OHLCV columns to numeric types,
-* creating a structured tabular dataset.
-
-### 3. Validate
-
-The pipeline performs basic data-quality checks:
-
-* empty dataset,
-* missing values,
-* duplicate rows,
-* timestamp ordering,
-* OHLC consistency.
-
-If validation fails, the pipeline stops and the data is not loaded.
-
-### 4. Load
-
-The validated dataset is saved as:
-
-```text
-data/btcusdt_ohlcv.csv
-```
-
-### 5. SQL Analytics
-
-The saved CSV file is queried using DuckDB and SQL.
-
-The current SQL transformation calculates daily returns using the previous closing price:
-
-```text
-daily_return =
-(close - previous_close) / previous_close
-```
-
-The SQL query is stored in:
-
-```text
-sql/daily_returns.sql
-```
-
----
-
-## Configuration
-
-Pipeline parameters are stored in:
+Parametry pipeline'u znajdują się w:
 
 ```text
 src/config.py
 ```
 
-The configuration includes:
+Konfiguracja obejmuje między innymi:
 
-* trading symbol,
-* interval,
-* start date,
-* end date,
-* batch size,
-* output file.
+* symbol instrumentu,
+* interwał danych,
+* zakres dat,
+* wielkość partii danych,
+* lokalizację pliku wynikowego.
 
 ---
 
 ## Logging
 
-Pipeline execution is logged using Python's `logging` module.
+Projekt wykorzystuje moduł `logging` języka Python.
 
-The log contains information about:
+Logi pozwalają śledzić między innymi:
 
-* pipeline execution,
-* API requests,
-* downloaded records,
-* data validation,
-* output file creation,
-* SQL analytics.
+* rozpoczęcie i zakończenie pipeline'u,
+* komunikację z API,
+* liczbę pobranych rekordów,
+* wyniki walidacji,
+* utworzenie pliku wynikowego,
+* wykonanie analizy SQL.
 
-Example:
+Przykładowy przebieg:
 
 ```text
 Pipeline started
@@ -203,92 +235,117 @@ Pipeline finished successfully
 
 ---
 
-## Testing
+## Testy
 
-The project uses `pytest` for automated testing.
+Do automatycznego testowania projektu wykorzystuję **pytest**.
 
-Run tests locally with:
+Testy obejmują między innymi:
 
-```powershell
+* pobieranie danych z API,
+* obsługę błędów API,
+* transformację danych,
+* walidację danych,
+* zapis do CSV,
+* analizę SQL,
+* główną funkcję pipeline'u.
+
+Testy związane z API wykorzystują mockowanie, dzięki czemu nie wymagają rzeczywistego połączenia z Binance.
+
+Uruchomienie testów:
+
+```bash
 python -m pytest
 ```
 
-The test suite covers:
+---
 
-* API data extraction,
-* data transformation,
-* data validation,
-* CSV loading,
-* SQL analytics,
-* pipeline execution.
+## Kontrola jakości kodu
 
-Code quality is checked with Ruff:
+Do statycznej kontroli kodu wykorzystuję **Ruff**.
 
-```powershell
+Uruchomienie:
+
+```bash
 ruff check src tests
 ```
+
+Ruff sprawdza kod pod kątem problemów zgodnie z konfiguracją narzędzia.
 
 ---
 
 ## Docker
 
-The application can be packaged as a Docker image.
+Projekt może być uruchamiany w kontenerze Docker.
 
-### Build the image locally
+### Budowanie obrazu
 
-```powershell
+```bash
 docker build -t financial-data-pipeline:latest .
 ```
 
-### Run the container
+### Uruchomienie kontenera
+
+W systemie Windows PowerShell:
 
 ```powershell
 docker run --rm -v "${PWD}\data:/app/data" financial-data-pipeline:latest
 ```
 
-The bind mount makes the local `data` directory available inside the container as:
+Parametr:
 
 ```text
-/app/data
+-v "${PWD}\data:/app/data"
 ```
+
+tworzy bind mount pomiędzy lokalnym katalogiem `data` a katalogiem `/app/data` znajdującym się w kontenerze.
+
+Dzięki temu plik wygenerowany przez pipeline w kontenerze jest dostępny również lokalnie.
+
+Parametr:
+
+```text
+--rm
+```
+
+powoduje automatyczne usunięcie kontenera po jego zakończeniu.
 
 ---
 
 ## Docker Hub
 
-A ready-to-use Docker image is published to Docker Hub:
+Gotowy obraz projektu jest publikowany na Docker Hub:
 
 ```text
 krzysiekgdansk1985/financial-data-pipeline:latest
 ```
 
-Pull the image:
+Pobranie obrazu:
 
-```powershell
+```bash
 docker pull krzysiekgdansk1985/financial-data-pipeline:latest
 ```
 
-Run it:
+Uruchomienie:
 
 ```powershell
 docker run --rm -v "${PWD}\data:/app/data" krzysiekgdansk1985/financial-data-pipeline:latest
 ```
 
-This allows the pipeline to be executed without building the Docker image locally.
+Dzięki temu użytkownik nie musi lokalnie instalować Pythona ani bibliotek wymaganych przez projekt.
 
 ---
 
-## CI/CD
+## CI/CD – GitHub Actions
 
-The project uses GitHub Actions for continuous integration and delivery.
+Projekt wykorzystuje **GitHub Actions** do automatyzacji kontroli kodu, testów oraz budowania i publikowania obrazu Docker.
 
-The workflow is defined in:
+Workflow znajduje się w:
 
 ```text
 .github/workflows/ci.yml
 ```
 
-Every push to the `master` branch triggers the following process:
+Proces wygląda następująco:
 
 ```text
 git push
@@ -309,51 +366,55 @@ Docker build
 Docker Hub
 ```
 
-The Docker image is built and published only if the tests pass.
+Job odpowiedzialny za Docker zależy od pomyślnego zakończenia joba testowego.
 
-The workflow creates two Docker image tags:
+Oznacza to, że jeżeli testy zakończą się błędem, obraz Docker nie zostanie zbudowany i opublikowany przez ten workflow.
+
+Obraz Docker jest publikowany z dwoma tagami:
 
 ```text
 latest
 ```
 
-and:
+oraz:
 
 ```text
 <Git commit SHA>
 ```
 
-The commit SHA tag identifies the exact source commit used to build the image.
+Tag zawierający SHA commita pozwala jednoznacznie powiązać obraz Docker z konkretną wersją kodu źródłowego.
 
 ---
 
-## Running the Pipeline Locally
+## Uruchomienie lokalne
 
-### 1. Create a virtual environment
+### 1. Utworzenie środowiska wirtualnego
 
-```powershell
+```bash
 python -m venv .venv
 ```
 
-### 2. Activate the environment
+### 2. Aktywacja środowiska
+
+W PowerShell:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
+### 3. Instalacja zależności
 
-```powershell
+```bash
 python -m pip install -r requirements.txt
 ```
 
-### 4. Run the pipeline
+### 4. Uruchomienie pipeline'u
 
-```powershell
+```bash
 python -m src.main
 ```
 
-After successful execution, the processed dataset is saved to:
+Po poprawnym wykonaniu pipeline'u dane zostaną zapisane w:
 
 ```text
 data/btcusdt_ohlcv.csv
@@ -361,48 +422,100 @@ data/btcusdt_ohlcv.csv
 
 ---
 
-## Running the Pipeline with Docker
+## Uruchomienie za pomocą Docker
 
-Alternatively, the pipeline can be run using the published Docker image:
+Alternatywnie projekt można uruchomić bez lokalnej instalacji Pythona i bibliotek.
 
-```powershell
+```bash
 docker pull krzysiekgdansk1985/financial-data-pipeline:latest
 ```
 
-Then:
+Następnie:
 
 ```powershell
 docker run --rm -v "${PWD}\data:/app/data" krzysiekgdansk1985/financial-data-pipeline:latest
 ```
 
-No local Python environment is required for the Docker-based execution.
+---
+
+## Technologie
+
+Projekt wykorzystuje:
+
+* **Python 3.13**
+* **Pandas**
+* **Requests**
+* **DuckDB**
+* **SQL**
+* **Pytest**
+* **Ruff**
+* **Docker**
+* **Git**
+* **GitHub**
+* **GitHub Actions**
+* **Docker Hub**
+* **Binance API**
 
 ---
 
-## CI/CD Summary
+## Możliwe kierunki rozwoju
 
-The project demonstrates the following workflow:
+Projekt jest rozwijany jako projekt edukacyjny i portfolio Data Engineering.
+
+Możliwe kolejne kroki:
+
+* zwiększenie pokrycia testami i dodanie kolejnych przypadków brzegowych,
+* zastąpienie pliku CSV bazą PostgreSQL,
+* dodanie automatycznego, cyklicznego uruchamiania pipeline'u,
+* pobieranie danych inkrementalnie zamiast całej historii,
+* dodanie testów integracyjnych,
+* parametryzacja konfiguracji za pomocą zmiennych środowiskowych,
+* wykorzystanie narzędzia do orkiestracji pipeline'ów, np. Airflow.
+
+---
+
+## Podsumowanie
+
+Projekt przedstawia kompletny przepływ danych:
 
 ```text
-Python ETL
-    │
-    ├── Extract
-    ├── Transform
-    ├── Validate
-    ├── Load
-    └── SQL Analytics
-          │
-          ▼
-       Pytest
-          │
-          ▼
-       GitHub Actions
-          │
-          ▼
-      Docker Build
-          │
-          ▼
-       Docker Hub
+Binance API
+     │
+     ▼
+   Extract
+     │
+     ▼
+  Transform
+     │
+     ▼
+  Validate
+     │
+     ▼
+    Load
+     │
+     ▼
+ CSV dataset
+     │
+     ▼
+ DuckDB + SQL
+     │
+     ▼
+ Daily returns
 ```
 
-The goal of the project is to demonstrate practical data engineering skills including ETL development, data quality validation, SQL analytics, automated testing, containerization, and CI/CD automation.
+Dodatkowo projekt wykorzystuje:
+
+```text
+Pytest
+   │
+   ▼
+GitHub Actions
+   │
+   ▼
+Docker Build
+   │
+   ▼
+Docker Hub
+```
+
+Celem projektu jest praktyczne rozwijanie umiejętności związanych z **ETL, jakością danych, Pythonem, SQL, testowaniem, konteneryzacją oraz CI/CD**.
