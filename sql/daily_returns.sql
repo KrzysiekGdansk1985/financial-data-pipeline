@@ -3,7 +3,7 @@ WITH prices AS (
         open_time,
         close,
         LAG(close) OVER (ORDER BY open_time) AS previous_close
-    FROM 'data/btcusdt_ohlcv.csv'
+    FROM btc_ohlcv
 )
 SELECT
     open_time,

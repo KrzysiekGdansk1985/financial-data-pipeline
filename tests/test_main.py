@@ -16,14 +16,16 @@ def test_main_pipeline(monkeypatch):
     def fake_validate_data(df):
         return None
     
+    def fake_create_table():
+        pass
+    
     def fake_run_daily_returns(sql_path):
         return "fake_daily_returns"
 
     saved_data = {}
 
-    def fake_save_data(df, file_path):
+    def fake_save_to_postgres(df):
         saved_data["df"] = df
-        saved_data["file_path"] = file_path
 
     monkeypatch.setattr(
         main,
@@ -45,18 +47,23 @@ def test_main_pipeline(monkeypatch):
 
     monkeypatch.setattr(
         main,
+        "create_table",
+        fake_create_table,
+    )
+
+    monkeypatch.setattr(
+        main,
         "run_daily_returns",
         fake_run_daily_returns
     )
     
     monkeypatch.setattr(
         main,
-        "save_data",
-        fake_save_data
+        "save_to_postgres",
+        fake_save_to_postgres
     )
 
 
     main.main()
 
     assert saved_data["df"] == "fake_dataframe"
-    assert saved_data["file_path"] == main.OUTPUT_FILE

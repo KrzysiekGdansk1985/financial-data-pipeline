@@ -12,3 +12,5 @@ __pycache__/
 
 # Nie śledź danych dotyczących pokrycia Pytest
 .coverage
+
+.env
