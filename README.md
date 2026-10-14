@@ -2,7 +2,7 @@
 
 Pipeline ETL do pobierania, przetwarzania, walidacji, przechowywania i analizy danych rynkowych BTCUSDT z Binance API.
 
-Projekt został wykonany w celu praktycznego rozwijania umiejętności z zakresu **Data Engineering**, w szczególności ETL, pracy z API, jakości danych, PostgreSQL, SQL, testowania, Dockera oraz CI/CD.
+Projekt został wykonany w celu praktycznego rozwijania umiejętności z zakresu **Data Engineering**, w szczególności ETL, pracy z API, jakości danych, PostgreSQL, SQL, testowania, Dockera, Docker Compose oraz CI/CD.
 
 ---
 
@@ -18,14 +18,14 @@ Pipeline:
 4. zapisuje poprawne dane do PostgreSQL,
 5. wykonuje dodatkową analizę przy użyciu SQL.
 
-Projekt zawiera również automatyczne testy, kontrolę jakości kodu oraz proces CI/CD z wykorzystaniem GitHub Actions i Docker Hub.
+Projekt zawiera również automatyczne testy, kontrolę jakości kodu, konteneryzację aplikacji i bazy danych oraz proces CI/CD z wykorzystaniem GitHub Actions i Docker Hub.
 
 ---
 
 ## Architektura
 
 ```text
-              Binance API
+               Binance API
                    │
                    ▼
                 EXTRACT
@@ -36,24 +36,44 @@ Projekt zawiera również automatyczne testy, kontrolę jakości kodu oraz proce
                    ▼
                 VALIDATE
                    │
-            ┌──────┴──────┐
-            │             │
-         poprawne       błędne
-            │             │
-            ▼             ▼
-           LOAD          STOP
-            │
-            ▼
-        PostgreSQL
-        btc_ohlcv
-            │
-            ▼
-          SQL
+             ┌─────┴─────┐
+             │           │
+          poprawne     błędne
+             │           │
+             ▼           ▼
+            LOAD        STOP
+             │
+             ▼
+         PostgreSQL
+          btc_ohlcv
+             │
+             ▼
+            SQL
         LAG(close)
-            │
-            ▼
-      Daily returns
+             │
+             ▼
+       Daily returns
 ```
+
+Środowisko kontenerowe:
+
+```text
+             Docker Compose
+                   │
+          ┌────────┴────────┐
+          │                 │
+          ▼                 ▼
+        app                db
+   Python pipeline     PostgreSQL 17
+          │                 │
+          └───────►─────────┘
+                            │
+                            ▼
+                     postgres_data
+                     named volume
+```
+
+Serwis `app` komunikuje się z PostgreSQL przez wewnętrzną sieć Docker Compose, używając nazwy serwisu `db` jako hosta.
 
 ---
 
@@ -222,13 +242,11 @@ financial-data-pipeline/
 │   ├── extract.py
 │   ├── transform.py
 │   ├── validate.py
-│   ├── load.py
 │   ├── sql_runner.py
 │   └── logger_config.py
 │
 ├── tests/
 │   ├── test_extract.py
-│   ├── test_load.py
 │   ├── test_main.py
 │   ├── test_sql_runner.py
 │   ├── test_transform.py
@@ -236,8 +254,10 @@ financial-data-pipeline/
 │
 ├── .dockerignore
 ├── .gitignore
+├── compose.yaml
 ├── Dockerfile
 ├── requirements.txt
+├── requirements-dev.txt
 └── README.md
 ```
 
@@ -278,7 +298,7 @@ Podczas lokalnego uruchamiania mogą znajdować się w pliku:
 .env
 ```
 
-Przykładowa struktura:
+Przykładowa konfiguracja dla uruchamiania aplikacji bezpośrednio na Windowsie z PostgreSQL udostępnionym na porcie `5433`:
 
 ```env
 POSTGRES_HOST=localhost
@@ -289,6 +309,15 @@ POSTGRES_PASSWORD=your_password
 ```
 
 Plik `.env` jest ignorowany przez Git i nie powinien być umieszczany w repozytorium.
+
+W środowisku Docker Compose aplikacja łączy się z bazą przez:
+
+```text
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+```
+
+Wartości te są przekazywane do kontenera aplikacji przez `compose.yaml`.
 
 ---
 
@@ -324,7 +353,7 @@ Pipeline finished successfully
 
 Do automatycznego testowania projektu wykorzystywany jest **pytest**.
 
-Testy obejmują między innymi:
+Projekt zawiera obecnie 11 testów obejmujących między innymi:
 
 - pobieranie danych z API,
 - obsługę błędów API,
@@ -355,21 +384,182 @@ ruff check src tests
 
 ---
 
+## Zależności
+
+Zależności zostały rozdzielone na zależności aplikacji i narzędzia developerskie.
+
+`requirements.txt` zawiera biblioteki wymagane do działania aplikacji:
+
+```text
+pandas
+psycopg
+python-dotenv
+requests
+```
+
+`requirements-dev.txt` zawiera dodatkowo narzędzia potrzebne podczas rozwoju i testowania projektu:
+
+```text
+pytest
+pytest-cov
+ruff
+```
+
+Instalacja zależności aplikacji:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Instalacja środowiska developerskiego:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+---
+
 ## Docker
 
-Projekt posiada `Dockerfile`, który umożliwia zbudowanie obrazu aplikacji.
+Projekt posiada `Dockerfile`, który buduje obraz aplikacji Python.
 
-Budowanie obrazu:
+Obraz zawiera:
+
+- Python 3.13,
+- bibliotekę systemową `libpq5` potrzebną do komunikacji z PostgreSQL,
+- zależności aplikacji z `requirements.txt`,
+- kod aplikacji,
+- zapytania SQL.
+
+Domyślnym poleceniem uruchamianym przez obraz jest:
+
+```text
+python -m src.main
+```
+
+Budowanie samego obrazu:
 
 ```bash
 docker build -t financial-data-pipeline:latest .
 ```
 
-Aplikacja wymaga dostępu do PostgreSQL oraz przekazania odpowiednich zmiennych środowiskowych.
+---
 
-Po przejściu z zapisu do lokalnego pliku CSV na PostgreSQL poprzedni bind mount katalogu `data/` nie jest już wymagany.
+## Docker Compose
 
-Pełna konfiguracja uruchamiania aplikacji i PostgreSQL w kontenerach może zostać rozwinięta w kolejnym etapie projektu, np. przy użyciu Docker Compose.
+Projekt wykorzystuje Docker Compose do uruchamiania aplikacji oraz PostgreSQL jako współpracujących usług.
+
+Konfiguracja znajduje się w:
+
+```text
+compose.yaml
+```
+
+Compose definiuje dwa serwisy:
+
+```text
+app
+db
+```
+
+`app` budowany jest na podstawie lokalnego `Dockerfile`.
+
+`db` wykorzystuje obraz:
+
+```text
+postgres:17
+```
+
+PostgreSQL posiada healthcheck wykorzystujący `pg_isready`.
+
+Dzięki:
+
+```yaml
+depends_on:
+  db:
+    condition: service_healthy
+```
+
+aplikacja uruchamia pipeline dopiero wtedy, gdy PostgreSQL jest gotowy do przyjmowania połączeń.
+
+Uruchomienie całego środowiska:
+
+```bash
+docker compose up --build
+```
+
+Pipeline jest procesem jednorazowym. Po poprawnym wykonaniu serwis `app` kończy działanie z kodem `0`, natomiast PostgreSQL może nadal działać.
+
+Zatrzymanie środowiska:
+
+```bash
+docker compose down
+```
+
+---
+
+## Trwałość danych PostgreSQL
+
+PostgreSQL wykorzystuje nazwany wolumen Docker:
+
+```text
+postgres_data
+```
+
+który jest podłączony do:
+
+```text
+/var/lib/postgresql/data
+```
+
+Dzięki temu dane PostgreSQL nie są przechowywane wyłącznie w systemie plików kontenera.
+
+Polecenie:
+
+```bash
+docker compose down
+```
+
+usuwa kontenery i sieć Compose, ale pozostawia named volume oraz zapisane dane.
+
+Polecenie:
+
+```bash
+docker compose down -v
+```
+
+usuwa również wolumen, a więc dane PostgreSQL przechowywane przez ten wolumen.
+
+---
+
+## Komunikacja z PostgreSQL w Docker Compose
+
+Wewnątrz sieci Docker Compose aplikacja łączy się z bazą za pomocą:
+
+```text
+db:5432
+```
+
+`db` jest nazwą serwisu PostgreSQL i jest rozwiązywana przez wewnętrzny DNS Dockera.
+
+Mapowanie:
+
+```text
+5433:5432
+```
+
+umożliwia natomiast dostęp do PostgreSQL z komputera hosta:
+
+```text
+localhost:5433
+```
+
+Czyli:
+
+```text
+app container → db:5432
+Windows       → localhost:5433
+```
 
 ---
 
@@ -387,7 +577,7 @@ Pobranie obrazu:
 docker pull krzysiekgdansk1985/financial-data-pipeline:latest
 ```
 
-Obraz zawiera aplikację i jej zależności Python. Do uruchomienia pipeline'u nadal wymagane jest połączenie z instancją PostgreSQL oraz odpowiednia konfiguracja zmiennych środowiskowych.
+Obraz zawiera aplikację i jej zależności Python. Do wykonania pipeline'u wymagany jest również dostęp do PostgreSQL oraz odpowiednia konfiguracja zmiennych środowiskowych.
 
 ---
 
@@ -420,6 +610,12 @@ Docker build
    │
    ▼
 Docker Hub
+```
+
+Job testowy instaluje zależności z:
+
+```text
+requirements-dev.txt
 ```
 
 Job odpowiedzialny za Docker zależy od pomyślnego zakończenia joba testowego.
@@ -455,8 +651,16 @@ W PowerShell:
 
 ### 3. Instalacja zależności
 
+Do uruchomienia aplikacji:
+
 ```bash
 python -m pip install -r requirements.txt
+```
+
+Do rozwoju projektu, uruchamiania testów i Ruff:
+
+```bash
+python -m pip install -r requirements-dev.txt
 ```
 
 ### 4. Konfiguracja PostgreSQL
@@ -497,6 +701,31 @@ SQL analytics
 
 ---
 
+## Uruchomienie przy użyciu Docker Compose
+
+Utwórz plik `.env` zawierający konfigurację bazy, a następnie uruchom:
+
+```bash
+docker compose up --build
+```
+
+Docker Compose:
+
+1. uruchomi PostgreSQL,
+2. sprawdzi jego gotowość przy użyciu healthcheck,
+3. uruchomi aplikację,
+4. wykona pipeline,
+5. zapisze dane do PostgreSQL,
+6. zachowa dane w named volume `postgres_data`.
+
+Do zatrzymania środowiska:
+
+```bash
+docker compose down
+```
+
+---
+
 ## Technologie
 
 Projekt wykorzystuje:
@@ -504,13 +733,15 @@ Projekt wykorzystuje:
 - **Python 3.13**
 - **Pandas**
 - **Requests**
-- **PostgreSQL**
+- **PostgreSQL 17**
 - **psycopg**
 - **python-dotenv**
 - **SQL**
 - **Pytest**
+- **pytest-cov**
 - **Ruff**
 - **Docker**
+- **Docker Compose**
 - **Git**
 - **GitHub**
 - **GitHub Actions**
@@ -526,8 +757,6 @@ Projekt jest rozwijany jako projekt edukacyjny i portfolio Data Engineering.
 Możliwe kolejne kroki:
 
 - dodanie testów integracyjnych z rzeczywistą bazą PostgreSQL,
-- uruchamianie aplikacji i PostgreSQL przy użyciu Docker Compose,
-- dodanie trwałego wolumenu dla PostgreSQL,
 - pobieranie danych inkrementalnie zamiast całego skonfigurowanego zakresu,
 - dodanie automatycznego, cyklicznego uruchamiania pipeline'u,
 - wprowadzenie mechanizmu migracji schematu bazy danych,
@@ -552,13 +781,26 @@ Binance API
  Validate
      │
      ▼
- PostgreSQL
+PostgreSQL
      │
      ▼
- SQL analytics
+SQL analytics
      │
      ▼
 Daily returns
+```
+
+Środowisko aplikacji i bazy danych jest zarządzane przez Docker Compose:
+
+```text
+Docker Compose
+     │
+     ├── app
+     │
+     └── PostgreSQL
+             │
+             ▼
+       persistent volume
 ```
 
 Dodatkowo projekt wykorzystuje:
