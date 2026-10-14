@@ -2,4 +2,4 @@
 
 pytest==9.1.1
 pytest-cov
-ruff
+ruff==0.16.3
