@@ -14,5 +14,3 @@ END_DATE = datetime(
 )
 
 BATCH_DAYS = 5
-
-OUTPUT_FILE = "data/btcusdt_ohlcv.csv"
