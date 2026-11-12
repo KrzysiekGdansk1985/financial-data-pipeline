@@ -1,359 +1,712 @@
-# Financial Data Pipeline
+**# Financial Data Pipeline**
+
+
 
 Pipeline ETL do pobierania, przetwarzania, walidacji, przechowywania i analizy danych rynkowych BTCUSDT z Binance API.
 
-Projekt został wykonany w celu praktycznego rozwijania umiejętności z zakresu **Data Engineering**, w szczególności ETL, pracy z API, jakości danych, PostgreSQL, SQL, testowania, Dockera, Docker Compose oraz CI/CD.
 
----
 
-## Cel projektu
+Projekt został wykonany w celu praktycznego rozwijania umiejętności z zakresu **\*\*Data Engineering\*\***, w szczególności ETL, pracy z API, jakości danych, PostgreSQL, SQL, testowania, Dockera, Docker Compose oraz CI/CD.
+
+
+
+**---**
+
+
+
+**## Cel projektu**
+
+
 
 Celem projektu jest stworzenie kompletnego pipeline'u przetwarzającego historyczne dane BTCUSDT.
 
+
+
 Pipeline:
 
-1. pobiera dane z Binance API,
-2. przekształca dane do odpowiednich typów,
-3. sprawdza ich poprawność,
-4. zapisuje poprawne dane do PostgreSQL,
-5. wykonuje dodatkową analizę przy użyciu SQL.
+
+
+1\. pobiera dane z Binance API,
+
+2\. przekształca dane do odpowiednich typów,
+
+3\. sprawdza ich poprawność,
+
+4\. zapisuje poprawne dane do PostgreSQL,
+
+5\. wykonuje dodatkową analizę przy użyciu SQL.
+
+
 
 Projekt zawiera również automatyczne testy, kontrolę jakości kodu, konteneryzację aplikacji i bazy danych oraz proces CI/CD z wykorzystaniem GitHub Actions i Docker Hub.
 
----
 
-## Architektura
 
-```text
-               Binance API
-                   │
-                   ▼
-                EXTRACT
-                   │
-                   ▼
-               TRANSFORM
-                   │
-                   ▼
-                VALIDATE
-                   │
-             ┌─────┴─────┐
-             │           │
-          poprawne     błędne
-             │           │
-             ▼           ▼
-            LOAD        STOP
-             │
-             ▼
-         PostgreSQL
-          btc_ohlcv
-             │
-             ▼
-            SQL
-        LAG(close)
-             │
-             ▼
-       Daily returns
-```
+**---**
+
+
+
+**## Architektura**
+
+
+
+\`\`\`text
+
+               Binance API
+
+                   │
+
+                   ▼
+
+                EXTRACT
+
+                   │
+
+                   ▼
+
+               TRANSFORM
+
+                   │
+
+                   ▼
+
+                VALIDATE
+
+                   │
+
+             ┌─────┴─────┐
+
+             │           │
+
+          poprawne     błędne
+
+             │           │
+
+             ▼           ▼
+
+            LOAD        STOP
+
+             │
+
+             ▼
+
+         PostgreSQL
+
+          btc_ohlcv
+
+             │
+
+             ▼
+
+            SQL
+
+        LAG(close)
+
+             │
+
+             ▼
+
+       Daily returns
+
+\`\`\`
+
+
 
 Środowisko kontenerowe:
 
-```text
-             Docker Compose
-                   │
-          ┌────────┴────────┐
-          │                 │
-          ▼                 ▼
-        app                db
-   Python pipeline     PostgreSQL 17
-          │                 │
-          └───────►─────────┘
-                            │
-                            ▼
-                     postgres_data
-                     named volume
-```
 
-Serwis `app` komunikuje się z PostgreSQL przez wewnętrzną sieć Docker Compose, używając nazwy serwisu `db` jako hosta.
 
----
+\`\`\`text
 
-## Przebieg pipeline'u
+             Docker Compose
 
-### 1. Extract – pobieranie danych
+                   │
 
-Dane historyczne BTCUSDT są pobierane z **Binance API** przy użyciu biblioteki `requests`.
+          ┌────────┴────────┐
+
+          │                 │
+
+          ▼                 ▼
+
+        app                db
+
+   Python pipeline     PostgreSQL 17
+
+          │                 │
+
+          └───────►─────────┘
+
+                            │
+
+                            ▼
+
+                     postgres_data
+
+                     named volume
+
+\`\`\`
+
+
+
+Serwis \`app\` komunikuje się z PostgreSQL przez wewnętrzną sieć Docker Compose, używając nazwy serwisu \`db\` jako hosta.
+
+
+
+**---**
+
+
+
+**## Przebieg pipeline'u**
+
+
+
+**### 1. Extract – pobieranie danych**
+
+
+
+Dane historyczne BTCUSDT są pobierane z **\*\*Binance API\*\*** przy użyciu biblioteki \`requests\`.
+
+
 
 Pipeline umożliwia pobieranie danych w partiach, dzięki czemu cały zakres danych nie musi być pobierany w jednym żądaniu.
 
----
 
-### 2. Transform – przetwarzanie danych
 
-Dane otrzymane z API są przekształcane do postaci `Pandas DataFrame`.
+**---**
+
+
+
+**### 2. Transform – przetwarzanie danych**
+
+
+
+Dane otrzymane z API są przekształcane do postaci \`Pandas DataFrame\`.
+
+
 
 Transformacja obejmuje między innymi:
 
-- konwersję timestampów do typu `datetime`,
-- konwersję wartości OHLCV ze stringów do typów numerycznych,
-- przygotowanie uporządkowanego zbioru danych do dalszego przetwarzania.
 
----
 
-### 3. Validate – walidacja danych
+\- konwersję timestampów do typu \`datetime\`,
+
+\- konwersję wartości OHLCV ze stringów do typów numerycznych,
+
+\- przygotowanie uporządkowanego zbioru danych do dalszego przetwarzania.
+
+
+
+\---
+
+
+
+\### 3. Validate – walidacja danych
+
+
 
 Przed zapisaniem danych wykonywane są podstawowe kontrole jakości.
 
+
+
 Sprawdzane są między innymi:
 
-- czy zbiór danych nie jest pusty,
-- czy występują wartości `NULL` / brakujące,
-- czy występują duplikaty,
-- czy timestampy są uporządkowane,
-- czy wartości OHLC są ze sobą logicznie zgodne.
+
+
+\- czy zbiór danych nie jest pusty,
+
+\- czy występują wartości \`NULL\` / brakujące,
+
+\- czy występują duplikaty,
+
+\- czy timestampy są uporządkowane,
+
+\- czy wartości OHLC są ze sobą logicznie zgodne.
+
+
 
 Dla danych OHLC sprawdzane jest między innymi, czy:
 
-```text
+
+
+\`\`\`text
+
 High >= Open
+
 High >= Low
+
 High >= Close
 
+
+
 Low <= Open
+
 Low <= High
+
 Low <= Close
-```
+
+\`\`\`
+
+
 
 oraz czy wartości cen są nieujemne.
 
+
+
 Jeżeli walidacja zakończy się niepowodzeniem, pipeline zostaje zatrzymany i dane nie są zapisywane.
 
----
 
-### 4. Load – zapis do PostgreSQL
+
+\---
+
+
+
+\### 4. Load – zapis do PostgreSQL
+
+
 
 Poprawnie zwalidowane dane są zapisywane do tabeli:
 
-```text
+
+
+\`\`\`text
+
 btc_ohlcv
-```
+
+\`\`\`
+
+
 
 Tabela przechowuje:
 
-```text
-open_time
-open
-high
-low
-close
-volume
-```
 
-Kolumna `open_time` jest kluczem głównym (`PRIMARY KEY`).
+
+\`\`\`text
+
+open_time
+
+open
+
+high
+
+low
+
+close
+
+volume
+
+\`\`\`
+
+
+
+Kolumna \`open_time\` jest kluczem głównym (\`PRIMARY KEY\`).
+
+
 
 Podczas zapisu wykorzystywany jest mechanizm UPSERT:
 
-```sql
-INSERT INTO btc_ohlcv (...)
-VALUES (...)
-ON CONFLICT (open_time)
-DO UPDATE SET ...
-```
 
-Jeżeli rekord z danym `open_time` jeszcze nie istnieje, zostaje dodany.
+
+\`\`\`sql
+
+INSERT INTO btc_ohlcv (...)
+
+VALUES (...)
+
+ON CONFLICT (open_time)
+
+DO UPDATE SET ...
+
+\`\`\`
+
+
+
+Jeżeli rekord z danym \`open_time\` jeszcze nie istnieje, zostaje dodany.
+
+
 
 Jeżeli rekord już istnieje, jego wartości OHLCV zostają zaktualizowane.
 
-Pozwala to ponownie uruchamiać pipeline bez tworzenia duplikatów dla tego samego `open_time`.
 
----
 
-## PostgreSQL
+Pozwala to ponownie uruchamiać pipeline bez tworzenia duplikatów dla tego samego \`open_time\`.
 
-Połączenie z PostgreSQL realizowane jest przy użyciu biblioteki `psycopg`.
+
+
+\---
+
+
+
+\## PostgreSQL
+
+
+
+Połączenie z PostgreSQL realizowane jest przy użyciu biblioteki \`psycopg\`.
+
+
 
 Kod odpowiedzialny za komunikację z bazą znajduje się w:
 
-```text
+
+
+\`\`\`text
+
 src/db.py
-```
+
+\`\`\`
+
+
 
 Moduł zawiera funkcje odpowiedzialne za:
 
-- pobranie konfiguracji połączenia,
-- utworzenie tabeli `btc_ohlcv`,
-- zapis danych do PostgreSQL,
-- odczyt danych z PostgreSQL.
+
+
+\- pobranie konfiguracji połączenia,
+
+\- utworzenie tabeli \`btc_ohlcv\`,
+
+\- zapis danych do PostgreSQL,
+
+\- odczyt danych z PostgreSQL.
+
+
 
 Definicja tabeli znajduje się w:
 
-```text
+
+
+\`\`\`text
+
 sql/create_btc_ohlcv.sql
-```
 
----
+\`\`\`
 
-## Analiza danych – PostgreSQL i SQL
+
+
+\---
+
+
+
+\## Analiza danych – PostgreSQL i SQL
+
+
 
 Po zapisaniu danych pipeline wykonuje dodatkową analizę SQL bezpośrednio na danych znajdujących się w PostgreSQL.
 
+
+
 Zapytanie:
 
-```text
+
+
+\`\`\`text
+
 sql/daily_returns.sql
-```
+
+\`\`\`
+
+
 
 oblicza dzienny zwrot na podstawie ceny zamknięcia.
 
+
+
 Wykorzystywana jest funkcja okna:
 
-```sql
+
+
+\`\`\`sql
+
 LAG(close) OVER (ORDER BY open_time)
-```
+
+\`\`\`
+
+
 
 Pozwala ona pobrać cenę zamknięcia z poprzedniego rekordu według kolejności czasowej.
 
+
+
 Dzienny zwrot obliczany jest jako:
 
-```text
+
+
+\`\`\`text
+
 (close - previous_close) / previous_close
-```
 
-Dla pierwszego rekordu `daily_return` przyjmuje wartość `NULL`, ponieważ nie istnieje wcześniejsza cena zamknięcia.
+\`\`\`
 
----
 
-## Struktura projektu
 
-```text
+Dla pierwszego rekordu \`daily_return\` przyjmuje wartość \`NULL\`, ponieważ nie istnieje wcześniejsza cena zamknięcia.
+
+
+
+\---
+
+
+
+\## Struktura projektu
+
+
+
+\`\`\`text
+
 financial-data-pipeline/
+
 │
+
 ├── .github/
-│   └── workflows/
-│       └── ci.yml
+
+│   └── workflows/
+
+│       └── ci.yml
+
 │
+
 ├── sql/
-│   ├── create_btc_ohlcv.sql
-│   └── daily_returns.sql
+
+│   ├── create_btc_ohlcv.sql
+
+│   └── daily_returns.sql
+
 │
+
 ├── src/
-│   ├── main.py
-│   ├── config.py
-│   ├── db.py
-│   ├── extract.py
-│   ├── transform.py
-│   ├── validate.py
-│   ├── sql_runner.py
-│   └── logger_config.py
+
+│   ├── main.py
+
+│   ├── config.py
+
+│   ├── db.py
+
+│   ├── extract.py
+
+│   ├── transform.py
+
+│   ├── validate.py
+
+│   ├── sql_runner.py
+
+│   └── logger_config.py
+
 │
+
 ├── tests/
-│   ├── test_extract.py
-│   ├── test_main.py
-│   ├── test_sql_runner.py
-│   ├── test_transform.py
-│   └── test_validate.py
+
+│   ├── test_extract.py
+
+│   ├── test_main.py
+
+│   ├── test_sql_runner.py
+
+│   ├── test_transform.py
+
+│   └── test_validate.py
+
 │
+
 ├── .dockerignore
+
 ├── .gitignore
+
 ├── compose.yaml
+
 ├── Dockerfile
+
 ├── requirements.txt
+
 ├── requirements-dev.txt
+
 └── README.md
-```
 
----
+\`\`\`
 
-## Konfiguracja pipeline'u
+
+
+\---
+
+
+
+\## Konfiguracja pipeline'u
+
+
 
 Parametry pobierania danych znajdują się w:
 
-```text
+
+
+\`\`\`text
+
 src/config.py
-```
+
+\`\`\`
+
+
 
 Konfiguracja obejmuje między innymi:
 
-- symbol instrumentu,
-- interwał danych,
-- zakres dat,
-- wielkość partii danych.
 
----
 
-## Konfiguracja PostgreSQL
+\- symbol instrumentu,
+
+\- interwał danych,
+
+\- zakres dat,
+
+\- wielkość partii danych.
+
+
+
+\---
+
+
+
+\## Konfiguracja PostgreSQL
+
+
 
 Dane dostępowe do PostgreSQL są przekazywane przez zmienne środowiskowe:
 
-```text
+
+
+\`\`\`text
+
 POSTGRES_HOST
+
 POSTGRES_PORT
+
 POSTGRES_DB
+
 POSTGRES_USER
+
 POSTGRES_PASSWORD
-```
+
+\`\`\`
+
+
 
 Podczas lokalnego uruchamiania mogą znajdować się w pliku:
 
-```text
+
+
+\`\`\`text
+
 .env
-```
 
-Przykładowa konfiguracja dla uruchamiania aplikacji bezpośrednio na Windowsie z PostgreSQL udostępnionym na porcie `5433`:
+\`\`\`
 
-```env
+
+
+Przykładowa konfiguracja dla uruchamiania aplikacji bezpośrednio na Windowsie z PostgreSQL udostępnionym na porcie \`5433\`:
+
+
+
+\`\`\`env
+
 POSTGRES_HOST=localhost
-POSTGRES_PORT=5433
-POSTGRES_DB=financial_data
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password
-```
 
-Plik `.env` jest ignorowany przez Git i nie powinien być umieszczany w repozytorium.
+POSTGRES_PORT=5433
+
+POSTGRES_DB=financial_data
+
+POSTGRES_USER=postgres
+
+POSTGRES_PASSWORD=your_password
+
+\`\`\`
+
+
+
+Plik \`.env\` jest ignorowany przez Git i nie powinien być umieszczany w repozytorium.
+
+
 
 W środowisku Docker Compose aplikacja łączy się z bazą przez:
 
-```text
+
+
+\`\`\`text
+
 POSTGRES_HOST=db
+
 POSTGRES_PORT=5432
-```
 
-Wartości te są przekazywane do kontenera aplikacji przez `compose.yaml`.
+\`\`\`
 
----
 
-## Logging
 
-Projekt wykorzystuje moduł `logging` języka Python.
+Wartości te są przekazywane do kontenera aplikacji przez \`compose.yaml\`.
+
+
+
+\---
+
+
+
+\## Logging
+
+
+
+Projekt wykorzystuje moduł \`logging\` języka Python.
+
+
 
 Logi pozwalają śledzić między innymi:
 
-- rozpoczęcie i zakończenie pipeline'u,
-- komunikację z API,
-- liczbę pobranych rekordów,
-- wyniki walidacji,
-- wykonanie analizy SQL.
+
+
+\- rozpoczęcie i zakończenie pipeline'u,
+
+\- komunikację z API,
+
+\- liczbę pobranych rekordów,
+
+\- wyniki walidacji,
+
+\- wykonanie analizy SQL.
+
+
 
 Przykładowy przebieg:
 
-```text
+
+
+\`\`\`text
+
 Pipeline started
+
 Status: 200
+
 Records: 10
+
 Missing values: 0
+
 Duplicate rows: 0
+
 OHLC validation: True
+
 Daily returns calculated
+
 Analytics records: 10
+
 Pipeline finished successfully
-```
 
----
+\`\`\`
 
-## Testy
+
+
+\---
+
+
+
+\## Testy
 
 Do automatycznego testowania projektu wykorzystywany jest **pytest**.
 
-Projekt zawiera obecnie 11 testów obejmujących między innymi:
+Projekt zawiera obecnie **12 testów: 11 jednostkowych i 1 integracyjny**.
+
+Testy jednostkowe obejmują między innymi:
 
 - pobieranie danych z API,
 - obsługę błędów API,
@@ -362,228 +715,472 @@ Projekt zawiera obecnie 11 testów obejmujących między innymi:
 - główną funkcję pipeline'u,
 - warstwę odpowiedzialną za wykonanie analizy SQL.
 
-Testy wykorzystują mockowanie tam, gdzie kod komunikuje się z zewnętrznymi usługami lub bazą danych. Dzięki temu testy jednostkowe nie wymagają rzeczywistego połączenia z Binance API ani PostgreSQL.
+W testach jednostkowych komunikacja z zewnętrznymi usługami i bazą danych jest mockowana, dlatego nie wymagają one rzeczywistego połączenia z Binance API ani PostgreSQL.
 
-Uruchomienie testów:
+Projekt zawiera również **test integracyjny z rzeczywistą bazą PostgreSQL**. Test zapisuje kontrolowany zestaw danych do bazy, uruchamia prawdziwe zapytanie `sql/daily_returns.sql` wykorzystujące `LAG()` i sprawdza obliczone wartości `daily_return`.
+
+Test integracyjny oznaczony jest markerem:
+
+```python
+@pytest.mark.integration
+```
+
+Wspólne przygotowanie środowiska testowego znajduje się w:
+
+```text
+tests/conftest.py
+```
+
+Fixture `postgres_test_db`:
+
+- przełącza test na bazę `financial_data_test`,
+- tworzy tabelę, jeżeli jeszcze nie istnieje,
+- zabezpiecza test przed przypadkowym użyciem bazy innej niż testowa,
+- czyści tabelę przed testem,
+- wykorzystuje `yield` do rozdzielenia setup i teardown,
+- ponownie czyści tabelę po zakończeniu testu, również gdy test zakończy się niepowodzeniem.
+
+Uruchomienie wszystkich testów:
 
 ```bash
 python -m pytest
 ```
 
+Tylko testy jednostkowe:
+
+```bash
+python -m pytest -m "not integration"
+```
+
+Tylko testy integracyjne:
+
+```bash
+python -m pytest -m integration -v
+```
+
 ---
 
-## Kontrola jakości kodu
+\## Kontrola jakości kodu
 
-Do statycznej kontroli kodu wykorzystywany jest **Ruff**.
+
+
+Do statycznej kontroli kodu wykorzystywany jest \*\*Ruff\*\*.
+
+
 
 Uruchomienie:
 
-```bash
+
+
+\`\`\`bash
+
 ruff check src tests
-```
 
----
+\`\`\`
 
-## Zależności
+
+
+\---
+
+
+
+\## Zależności
+
+
 
 Zależności zostały rozdzielone na zależności aplikacji i narzędzia developerskie.
 
-`requirements.txt` zawiera biblioteki wymagane do działania aplikacji:
 
-```text
+
+\`requirements.txt\` zawiera biblioteki wymagane do działania aplikacji:
+
+
+
+\`\`\`text
+
 pandas
+
 psycopg
+
 python-dotenv
+
 requests
-```
 
-`requirements-dev.txt` zawiera dodatkowo narzędzia potrzebne podczas rozwoju i testowania projektu:
+\`\`\`
 
-```text
+
+
+\`requirements-dev.txt\` zawiera dodatkowo narzędzia potrzebne podczas rozwoju i testowania projektu:
+
+
+
+\`\`\`text
+
 pytest
+
 pytest-cov
+
 ruff
-```
+
+\`\`\`
+
+
 
 Instalacja zależności aplikacji:
 
-```bash
+
+
+\`\`\`bash
+
 python -m pip install -r requirements.txt
-```
+
+\`\`\`
+
+
 
 Instalacja środowiska developerskiego:
 
-```bash
+
+
+\`\`\`bash
+
 python -m pip install -r requirements-dev.txt
-```
 
----
+\`\`\`
 
-## Docker
 
-Projekt posiada `Dockerfile`, który buduje obraz aplikacji Python.
+
+\---
+
+
+
+\## Docker
+
+
+
+Projekt posiada \`Dockerfile\`, który buduje obraz aplikacji Python.
+
+
 
 Obraz zawiera:
 
-- Python 3.13,
-- bibliotekę systemową `libpq5` potrzebną do komunikacji z PostgreSQL,
-- zależności aplikacji z `requirements.txt`,
-- kod aplikacji,
-- zapytania SQL.
+
+
+\- Python 3.13,
+
+\- bibliotekę systemową \`libpq5\` potrzebną do komunikacji z PostgreSQL,
+
+\- zależności aplikacji z \`requirements.txt\`,
+
+\- kod aplikacji,
+
+\- zapytania SQL.
+
+
 
 Domyślnym poleceniem uruchamianym przez obraz jest:
 
-```text
+
+
+\`\`\`text
+
 python -m src.main
-```
+
+\`\`\`
+
+
 
 Budowanie samego obrazu:
 
-```bash
+
+
+\`\`\`bash
+
 docker build -t financial-data-pipeline:latest .
-```
 
----
+\`\`\`
 
-## Docker Compose
+
+
+\---
+
+
+
+\## Docker Compose
+
+
 
 Projekt wykorzystuje Docker Compose do uruchamiania aplikacji oraz PostgreSQL jako współpracujących usług.
 
+
+
 Konfiguracja znajduje się w:
 
-```text
+
+
+\`\`\`text
+
 compose.yaml
-```
+
+\`\`\`
+
+
 
 Compose definiuje dwa serwisy:
 
-```text
+
+
+\`\`\`text
+
 app
+
 db
-```
 
-`app` budowany jest na podstawie lokalnego `Dockerfile`.
+\`\`\`
 
-`db` wykorzystuje obraz:
 
-```text
+
+\`app\` budowany jest na podstawie lokalnego \`Dockerfile\`.
+
+
+
+\`db\` wykorzystuje obraz:
+
+
+
+\`\`\`text
+
 postgres:17
-```
 
-PostgreSQL posiada healthcheck wykorzystujący `pg_isready`.
+\`\`\`
+
+
+
+PostgreSQL posiada healthcheck wykorzystujący \`pg_isready\`.
+
+
 
 Dzięki:
 
-```yaml
+
+
+\`\`\`yaml
+
 depends_on:
-  db:
-    condition: service_healthy
-```
+
+  db:
+
+    condition: service_healthy
+
+\`\`\`
+
+
 
 aplikacja uruchamia pipeline dopiero wtedy, gdy PostgreSQL jest gotowy do przyjmowania połączeń.
 
+
+
 Uruchomienie całego środowiska:
 
-```bash
-docker compose up --build
-```
 
-Pipeline jest procesem jednorazowym. Po poprawnym wykonaniu serwis `app` kończy działanie z kodem `0`, natomiast PostgreSQL może nadal działać.
+
+\`\`\`bash
+
+docker compose up --build
+
+\`\`\`
+
+
+
+Pipeline jest procesem jednorazowym. Po poprawnym wykonaniu serwis \`app\` kończy działanie z kodem \`0\`, natomiast PostgreSQL może nadal działać.
+
+
 
 Zatrzymanie środowiska:
 
-```bash
+
+
+\`\`\`bash
+
 docker compose down
-```
 
----
+\`\`\`
 
-## Trwałość danych PostgreSQL
+
+
+\---
+
+
+
+\## Trwałość danych PostgreSQL
+
+
 
 PostgreSQL wykorzystuje nazwany wolumen Docker:
 
-```text
+
+
+\`\`\`text
+
 postgres_data
-```
+
+\`\`\`
+
+
 
 który jest podłączony do:
 
-```text
+
+
+\`\`\`text
+
 /var/lib/postgresql/data
-```
+
+\`\`\`
+
+
 
 Dzięki temu dane PostgreSQL nie są przechowywane wyłącznie w systemie plików kontenera.
 
+
+
 Polecenie:
 
-```bash
+
+
+\`\`\`bash
+
 docker compose down
-```
+
+\`\`\`
+
+
 
 usuwa kontenery i sieć Compose, ale pozostawia named volume oraz zapisane dane.
 
+
+
 Polecenie:
 
-```bash
+
+
+\`\`\`bash
+
 docker compose down -v
-```
+
+\`\`\`
+
+
 
 usuwa również wolumen, a więc dane PostgreSQL przechowywane przez ten wolumen.
 
----
 
-## Komunikacja z PostgreSQL w Docker Compose
+
+\---
+
+
+
+\## Komunikacja z PostgreSQL w Docker Compose
+
+
 
 Wewnątrz sieci Docker Compose aplikacja łączy się z bazą za pomocą:
 
-```text
-db:5432
-```
 
-`db` jest nazwą serwisu PostgreSQL i jest rozwiązywana przez wewnętrzny DNS Dockera.
+
+\`\`\`text
+
+db:5432
+
+\`\`\`
+
+
+
+\`db\` jest nazwą serwisu PostgreSQL i jest rozwiązywana przez wewnętrzny DNS Dockera.
+
+
 
 Mapowanie:
 
-```text
+
+
+\`\`\`text
+
 5433:5432
-```
+
+\`\`\`
+
+
 
 umożliwia natomiast dostęp do PostgreSQL z komputera hosta:
 
-```text
+
+
+\`\`\`text
+
 localhost:5433
-```
+
+\`\`\`
+
+
 
 Czyli:
 
-```text
+
+
+\`\`\`text
+
 app container → db:5432
-Windows       → localhost:5433
-```
 
----
+Windows       → localhost:5433
 
-## Docker Hub
+\`\`\`
+
+
+
+\---
+
+
+
+\## Docker Hub
+
+
 
 Obraz projektu jest publikowany na Docker Hub:
 
-```text
+
+
+\`\`\`text
+
 krzysiekgdansk1985/financial-data-pipeline:latest
-```
+
+\`\`\`
+
+
 
 Pobranie obrazu:
 
-```bash
+
+
+\`\`\`bash
+
 docker pull krzysiekgdansk1985/financial-data-pipeline:latest
-```
+
+\`\`\`
+
+
 
 Obraz zawiera aplikację i jej zależności Python. Do wykonania pipeline'u wymagany jest również dostęp do PostgreSQL oraz odpowiednia konfiguracja zmiennych środowiskowych.
 
----
 
-## CI/CD – GitHub Actions
 
-Projekt wykorzystuje **GitHub Actions** do automatyzacji kontroli kodu, testów oraz budowania i publikowania obrazu Docker.
+\---
+
+
+
+\## CI/CD – GitHub Actions
+
+Projekt wykorzystuje **GitHub Actions** do automatyzacji kontroli jakości kodu, testów jednostkowych, testów integracyjnych oraz budowania i publikowania obrazu Docker.
 
 Workflow znajduje się w:
 
@@ -591,7 +1188,7 @@ Workflow znajduje się w:
 .github/workflows/ci.yml
 ```
 
-Proces wygląda następująco:
+Proces dla `push` do gałęzi `master` wygląda następująco:
 
 ```text
 git push
@@ -600,29 +1197,39 @@ git push
 GitHub Actions
    │
    ▼
-Ruff
+test
+Ruff + unit tests
    │
    ▼
-pytest
+integration
+PostgreSQL 17 service + integration test
    │
    ▼
-Docker build
+docker
+Docker build + push
    │
    ▼
 Docker Hub
 ```
 
-Job testowy instaluje zależności z:
+Job `test` instaluje zależności z `requirements-dev.txt`, uruchamia Ruff oraz 11 testów jednostkowych:
 
-```text
-requirements-dev.txt
+```bash
+ruff check src tests
+python -m pytest -m "not integration"
 ```
 
-Job odpowiedzialny za Docker zależy od pomyślnego zakończenia joba testowego.
+Job `integration` uruchamia się dopiero po pomyślnym zakończeniu joba `test`. GitHub Actions uruchamia dla niego PostgreSQL 17 jako **service container** z osobną bazą `financial_data_test` i healthcheckiem `pg_isready`.
 
-Jeżeli testy zakończą się błędem, obraz Docker nie zostanie zbudowany i opublikowany przez ten workflow.
+Następnie wykonywany jest test integracyjny:
 
-Obraz Docker jest publikowany z dwoma tagami:
+```bash
+python -m pytest -m integration
+```
+
+Job `docker` zależy od pomyślnego zakończenia joba `integration` i jest wykonywany przy `push` do `master`. Jeżeli kontrola jakości, testy jednostkowe lub test integracyjny zakończą się błędem, obraz Docker nie zostanie opublikowany przez workflow.
+
+Obraz Docker publikowany jest z dwoma tagami:
 
 ```text
 latest
@@ -631,191 +1238,381 @@ latest
 
 Tag zawierający SHA commita pozwala jednoznacznie powiązać obraz Docker z konkretną wersją kodu źródłowego.
 
+Dla `pull_request` uruchamiane są joby `test` i `integration`, natomiast publikowanie obrazu Docker jest pomijane.
+
 ---
 
-## Uruchomienie lokalne
+\## Uruchomienie lokalne
 
-### 1. Utworzenie środowiska wirtualnego
 
-```bash
+
+\### 1. Utworzenie środowiska wirtualnego
+
+
+
+\`\`\`bash
+
 python -m venv .venv
-```
 
-### 2. Aktywacja środowiska
+\`\`\`
+
+
+
+\### 2. Aktywacja środowiska
+
+
 
 W PowerShell:
 
-```powershell
-.venv\Scripts\Activate.ps1
-```
 
-### 3. Instalacja zależności
+
+\`\`\`powershell
+
+.venv\Scripts\Activate.ps1
+
+\`\`\`
+
+
+
+\### 3. Instalacja zależności
+
+
 
 Do uruchomienia aplikacji:
 
-```bash
+
+
+\`\`\`bash
+
 python -m pip install -r requirements.txt
-```
+
+\`\`\`
+
+
 
 Do rozwoju projektu, uruchamiania testów i Ruff:
 
-```bash
+
+
+\`\`\`bash
+
 python -m pip install -r requirements-dev.txt
-```
 
-### 4. Konfiguracja PostgreSQL
+\`\`\`
 
-Utwórz plik `.env` i ustaw parametry połączenia z PostgreSQL:
 
-```env
+
+\### 4. Konfiguracja PostgreSQL
+
+
+
+Utwórz plik \`.env\` i ustaw parametry połączenia z PostgreSQL:
+
+
+
+\`\`\`env
+
 POSTGRES_HOST=localhost
-POSTGRES_PORT=<port>
-POSTGRES_DB=<database>
-POSTGRES_USER=<user>
-POSTGRES_PASSWORD=<password>
-```
 
-### 5. Uruchomienie pipeline'u
+POSTGRES_PORT=\<port>
 
-```bash
+POSTGRES_DB=\<database>
+
+POSTGRES_USER=\<user>
+
+POSTGRES_PASSWORD=\<password>
+
+\`\`\`
+
+
+
+\### 5. Uruchomienie pipeline'u
+
+
+
+\`\`\`bash
+
 python -m src.main
-```
+
+\`\`\`
+
+
 
 Pipeline:
 
-```text
+
+
+\`\`\`text
+
 Binance API
-     │
-     ▼
+
+     │
+
+     ▼
+
 Pandas DataFrame
-     │
-     ▼
+
+     │
+
+     ▼
+
 Validation
-     │
-     ▼
+
+     │
+
+     ▼
+
 PostgreSQL
-     │
-     ▼
+
+     │
+
+     ▼
+
 SQL analytics
-```
 
----
+\`\`\`
 
-## Uruchomienie przy użyciu Docker Compose
 
-Utwórz plik `.env` zawierający konfigurację bazy, a następnie uruchom:
 
-```bash
+\---
+
+
+
+\## Uruchomienie przy użyciu Docker Compose
+
+
+
+Utwórz plik \`.env\` zawierający konfigurację bazy, a następnie uruchom:
+
+
+
+\`\`\`bash
+
 docker compose up --build
-```
+
+\`\`\`
+
+
 
 Docker Compose:
 
-1. uruchomi PostgreSQL,
-2. sprawdzi jego gotowość przy użyciu healthcheck,
-3. uruchomi aplikację,
-4. wykona pipeline,
-5. zapisze dane do PostgreSQL,
-6. zachowa dane w named volume `postgres_data`.
+
+
+1\. uruchomi PostgreSQL,
+
+2\. sprawdzi jego gotowość przy użyciu healthcheck,
+
+3\. uruchomi aplikację,
+
+4\. wykona pipeline,
+
+5\. zapisze dane do PostgreSQL,
+
+6\. zachowa dane w named volume \`postgres_data\`.
+
+
 
 Do zatrzymania środowiska:
 
-```bash
+
+
+\`\`\`bash
+
 docker compose down
-```
 
----
+\`\`\`
 
-## Technologie
+
+
+\---
+
+
+
+\## Technologie
+
+
 
 Projekt wykorzystuje:
 
-- **Python 3.13**
-- **Pandas**
-- **Requests**
-- **PostgreSQL 17**
-- **psycopg**
-- **python-dotenv**
-- **SQL**
-- **Pytest**
-- **pytest-cov**
-- **Ruff**
-- **Docker**
-- **Docker Compose**
-- **Git**
-- **GitHub**
-- **GitHub Actions**
-- **Docker Hub**
-- **Binance API**
 
----
 
-## Możliwe kierunki rozwoju
+\- \*\*Python 3.13\*\*
+
+\- \*\*Pandas\*\*
+
+\- \*\*Requests\*\*
+
+\- \*\*PostgreSQL 17\*\*
+
+\- \*\*psycopg\*\*
+
+\- \*\*python-dotenv\*\*
+
+\- \*\*SQL\*\*
+
+\- \*\*Pytest\*\*
+
+\- \*\*pytest-cov\*\*
+
+\- \*\*Ruff\*\*
+
+\- \*\*Docker\*\*
+
+\- \*\*Docker Compose\*\*
+
+\- \*\*Git\*\*
+
+\- \*\*GitHub\*\*
+
+\- \*\*GitHub Actions\*\*
+
+\- \*\*Docker Hub\*\*
+
+\- \*\*Binance API\*\*
+
+
+
+\---
+
+
+
+\## Możliwe kierunki rozwoju
+
+
 
 Projekt jest rozwijany jako projekt edukacyjny i portfolio Data Engineering.
 
+
+
 Możliwe kolejne kroki:
 
-- dodanie testów integracyjnych z rzeczywistą bazą PostgreSQL,
-- pobieranie danych inkrementalnie zamiast całego skonfigurowanego zakresu,
-- dodanie automatycznego, cyklicznego uruchamiania pipeline'u,
-- wprowadzenie mechanizmu migracji schematu bazy danych,
-- wykorzystanie narzędzia do orkiestracji pipeline'ów, np. Airflow.
 
----
 
-## Podsumowanie
+\- rozszerzenie zestawu testów integracyjnych o kolejne scenariusze PostgreSQL,
+
+\- pobieranie danych inkrementalnie zamiast całego skonfigurowanego zakresu,
+
+\- dodanie automatycznego, cyklicznego uruchamiania pipeline'u,
+
+\- wprowadzenie mechanizmu migracji schematu bazy danych,
+
+\- wykorzystanie narzędzia do orkiestracji pipeline'ów, np. Airflow.
+
+
+
+\---
+
+
+
+\## Podsumowanie
+
+
 
 Projekt przedstawia kompletny przepływ danych:
 
-```text
+
+
+\`\`\`text
+
 Binance API
-     │
-     ▼
-   Extract
-     │
-     ▼
- Transform
-     │
-     ▼
- Validate
-     │
-     ▼
+
+     │
+
+     ▼
+
+   Extract
+
+     │
+
+     ▼
+
+ Transform
+
+     │
+
+     ▼
+
+ Validate
+
+     │
+
+     ▼
+
 PostgreSQL
-     │
-     ▼
+
+     │
+
+     ▼
+
 SQL analytics
-     │
-     ▼
+
+     │
+
+     ▼
+
 Daily returns
-```
+
+\`\`\`
+
+
 
 Środowisko aplikacji i bazy danych jest zarządzane przez Docker Compose:
 
-```text
+
+
+\`\`\`text
+
 Docker Compose
-     │
-     ├── app
-     │
-     └── PostgreSQL
-             │
-             ▼
-       persistent volume
-```
+
+     │
+
+     ├── app
+
+     │
+
+     └── PostgreSQL
+
+             │
+
+             ▼
+
+       persistent volume
+
+\`\`\`
+
+
 
 Dodatkowo projekt wykorzystuje:
 
-```text
-Pytest + Ruff
-     │
-     ▼
-GitHub Actions
-     │
-     ▼
-Docker Build
-     │
-     ▼
-Docker Hub
-```
 
-Celem projektu jest praktyczne rozwijanie umiejętności związanych z **ETL, jakością danych, Pythonem, PostgreSQL, SQL, testowaniem, konteneryzacją oraz CI/CD**.
+
+\`\`\`text
+
+Ruff + unit tests
+    │
+    ▼
+Integration test + PostgreSQL
+
+     │
+
+     ▼
+
+GitHub Actions
+
+     │
+
+     ▼
+
+Docker Build
+
+     │
+
+     ▼
+
+Docker Hub
+
+\`\`\`
+
+
+
+Celem projektu jest praktyczne rozwijanie umiejętności związanych z \*\*ETL, jakością danych, Pythonem, PostgreSQL, SQL, testowaniem, konteneryzacją oraz CI/CD\*\*.
