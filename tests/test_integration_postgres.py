@@ -1,24 +1,13 @@
 import pandas as pd
-import psycopg
 import pytest
 
-from src.db import create_table, get_db_config, save_to_postgres
+from src.db import save_to_postgres
 from src.sql_runner import run_daily_returns
 
 
 @pytest.mark.integration
-def test_daily_returns_with_real_postgres(monkeypatch):
-    monkeypatch.setenv("POSTGRES_DB", "financial_data_test")
-
-    create_table()
-
-    config = get_db_config()
-
-    assert config["dbname"].endswith("_test")
-
-    with psycopg.connect(**config) as connection, connection.cursor() as cursor:
-        cursor.execute("TRUNCATE TABLE btc_ohlcv;")
-
+def test_daily_returns_with_real_postgres(postgres_test_db):
+    
     df = pd.DataFrame(
     {
         "open_time": pd.to_datetime(
